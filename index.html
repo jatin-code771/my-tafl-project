@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive DFA and NFA Simulator — build, visualize, and step through finite automata.">
+  <title>Automata Lab — DFA / NFA Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <div id="toolbar">
+    <div class="toolbar-brand">
+      <span class="brand-icon">⚙</span>
+      <span class="brand-text">Automata Lab</span>
+    </div>
+    <div class="toolbar-divider"></div>
+    <button id="btn-add-state" class="tool-btn active" title="Click on canvas to add states">
+      <span class="tool-icon">◉</span> Add State
+    </button>
+    <button id="btn-add-trans" class="tool-btn" title="Click source → destination to connect">
+      <span class="tool-icon">→</span> Add Transition
+    </button>
+    <button id="btn-set-start" class="tool-btn" title="Click a state to set as start">
+      <span class="tool-icon">▶</span> Set Start
+    </button>
+    <button id="btn-toggle-accept" class="tool-btn" title="Click a state to toggle accept">
+      <span class="tool-icon">◎</span> Toggle Accept
+    </button>
+    <div class="toolbar-divider"></div>
+    <button id="btn-load-dfa" class="tool-btn example-btn">📂 DFA Example</button>
+    <button id="btn-load-nfa" class="tool-btn example-btn">📂 NFA Example</button>
+    <div class="toolbar-divider"></div>
+    <button id="btn-export" class="tool-btn save-btn" title="Download as JSON">💾 Export</button>
+    <button id="btn-import" class="tool-btn save-btn" title="Load from JSON">📥 Import</button>
+    <input type="file" id="import-file" accept=".json" style="display:none">
+    <div class="toolbar-divider"></div>
+    <button id="btn-toggle-dead" class="tool-btn dead-btn active" title="Highlight dead states">
+      <span class="tool-icon"></span> Dead States <span id="dead-count-badge" class="dead-badge" style="display:none">0</span>
+    </button>
+    <button id="btn-toggle-trap" class="tool-btn dead-btn" title="Add implicit trap/sink state for missing transitions">
+      <span class="tool-icon"></span> Trap State
+    </button>
+    <div class="toolbar-divider"></div>
+    <button id="btn-clear" class="tool-btn danger">🗑 Clear</button>
+    <div class="toolbar-right">
+      <span id="mode-badge" class="badge-dfa">DFA</span>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="guide-bar">
+        <span id="guide-text">👋 Click anywhere on the canvas to add your first state!</span>
+        <button id="btn-cancel-trans" class="cancel-btn" style="display:none">✕ Cancel</button>
+      </div>
+    </div>
+
+    <div id="side-panel">
+      <div id="state-section" class="panel-section">
+        <h3>📌 States</h3>
+        <div class="input-row">
+          <input id="state-name-input" type="text" placeholder="e.g. q0, A, S1…">
+          <button id="btn-add-state-manual" title="Add state by name">+</button>
+        </div>
+        <ul id="state-list"></ul>
+        <p id="state-empty-msg" class="empty-msg">No states yet</p>
+      </div>
+
+      <div id="trans-section" class="panel-section">
+        <h3>🔗 Transitions</h3>
+        <ul id="trans-list"></ul>
+        <p id="trans-empty-msg" class="empty-msg">No transitions yet</p>
+      </div>
+
+      <div id="sim-section" class="panel-section">
+        <h3>▶ Simulation</h3>
+        <input id="sim-input" type="text" placeholder="Type input string… e.g. 0110">
+        <div class="btn-row">
+          <button id="btn-step" title="Step one symbol">⏭ Step</button>
+          <button id="btn-run" title="Auto-run">▶ Run</button>
+          <button id="btn-reset" title="Reset">↺ Reset</button>
+        </div>
+        <div id="tape"></div>
+        <div id="step-info"></div>
+        <div id="result-box"></div>
+      </div>
+
+      <div id="legend-section" class="panel-section">
+        <h3>📖 Quick Help</h3>
+        <div class="legend-row"><span class="legend-dot dot-start"></span> Start state</div>
+        <div class="legend-row"><span class="legend-dot dot-accept"></span> Accept state</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#F59E0B"></span> Active in simulation</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#EF4444"></span> Dead state (can't reach accept)</div>
+        <div class="legend-row"><span class="legend-dot dot-trap-legend"></span> Trap state (implicit sink)</div>
+        <div class="legend-row legend-tip">💡 Right-click a state for options</div>
+        <div class="legend-row legend-tip">💡 Double-click canvas = add state</div>
+        <div class="legend-row legend-tip">💡 Use <kbd>ε</kbd> symbol for NFA</div>
+        <div class="legend-row legend-tip">💀 Dead states auto-reject early</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <div id="ctx-menu">
+    <div data-action="set-start">▶ Set as Start</div>
+    <div data-action="toggle-accept">◎ Toggle Accept</div>
+    <div data-action="rename">✏️ Rename</div>
+    <div data-action="delete" class="ctx-danger">🗑 Delete</div>
+  </div>
+
+  <div id="trans-popup">
+    <div class="popup-title">Add Transition</div>
+    <p class="popup-hint">Enter symbols separated by comma.<br>Use <strong>ε</strong> for epsilon (makes it NFA).</p>
+    <input id="trans-symbols-input" type="text" placeholder="0, 1, ε">
+    <div class="popup-btns">
+      <button id="trans-confirm">✓ Add</button>
+      <button id="trans-cancel">Cancel</button>
+    </div>
+  </div>
+
+</body>
+</html>
